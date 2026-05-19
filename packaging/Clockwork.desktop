@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Clockwork
+GenericName=Time Tracker
+Comment=Minimal project & task time tracker
+Exec=clockwork
+Icon=clockwork
+Terminal=false
+Categories=Utility;Office;ProjectManagement;
+StartupWMClass=Clockwork
+Keywords=time;tracker;timer;projects;tasks;
