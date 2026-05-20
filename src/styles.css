@@ -18,6 +18,21 @@
     "Segoe UI", sans-serif;
 }
 
+html.light {
+  --color-bg: #f5f5f7;
+  --color-bg-elevated: #ffffff;
+  --color-bg-hover: #eaeaef;
+  --color-border: #d4d4dc;
+  --color-border-strong: #babac8;
+  --color-text: #111115;
+  --color-text-muted: #545460;
+  --color-text-dim: #9898a6;
+  --color-accent: #6b4ee6;
+  --color-accent-hover: #7c5cff;
+  --color-running: #059669;
+  --color-danger: #dc2626;
+}
+
 @layer base {
   html,
   body,

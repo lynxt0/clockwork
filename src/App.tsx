@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import { ResizeHandles } from "./components/ResizeHandles";
+import { ThemeToggle } from "./components/ThemeToggle";
 import { Home } from "./screens/Home";
 import { ProjectDetail } from "./screens/ProjectDetail";
 import { TaskDetail } from "./screens/TaskDetail";
@@ -50,6 +51,7 @@ function App() {
         </motion.div>
       </AnimatePresence>
       <ResizeHandles />
+      <ThemeToggle />
     </div>
   );
 }
