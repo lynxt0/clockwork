@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EditableText } from "../components/EditableText";
 import { LiveDuration } from "../components/LiveDuration";
 import { TitleBar } from "../components/TitleBar";
 import { Toggle } from "../components/Toggle";
@@ -6,6 +7,7 @@ import {
   deleteEntry,
   getTask,
   listEntries,
+  renameTask,
 } from "../lib/queries";
 import {
   formatDuration,
@@ -64,8 +66,23 @@ export function TaskDetail({ taskId, projectId }: Props) {
         <div className="text-[10px] uppercase tracking-[0.18em] text-text-dim">
           Task
         </div>
-        <div className="mb-3 truncate text-base font-semibold text-text">
-          {task?.name ?? "Loading…"}
+        <div className="mb-3">
+          {task ? (
+            <EditableText
+              value={task.name}
+              onSave={async (next) => {
+                await renameTask(task.id, next);
+                refresh();
+              }}
+              className="truncate text-base font-semibold text-text"
+              inputClassName="w-full rounded-md border border-accent/40 bg-bg-elevated px-2 py-0.5 text-base font-semibold text-text outline-none focus:border-accent"
+              ariaLabel="Edit task name"
+            />
+          ) : (
+            <div className="truncate text-base font-semibold text-text-muted">
+              Loading…
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-between">
           <div>

@@ -8,39 +8,59 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 const DB_URL: &str = "sqlite:clockwork.db";
 
 fn migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        description: "initial schema",
-        sql: "
-            CREATE TABLE IF NOT EXISTS projects (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                colour TEXT NOT NULL DEFAULT '#7c5cff',
-                created_at TEXT NOT NULL
-            );
+    vec![
+        Migration {
+            version: 1,
+            description: "initial schema",
+            sql: "
+                CREATE TABLE IF NOT EXISTS projects (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    colour TEXT NOT NULL DEFAULT '#7c5cff',
+                    created_at TEXT NOT NULL
+                );
 
-            CREATE TABLE IF NOT EXISTS tasks (
-                id TEXT PRIMARY KEY,
-                project_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
-            );
+                CREATE TABLE IF NOT EXISTS tasks (
+                    id TEXT PRIMARY KEY,
+                    project_id TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+                );
 
-            CREATE TABLE IF NOT EXISTS time_entries (
-                id TEXT PRIMARY KEY,
-                task_id TEXT NOT NULL,
-                started_at TEXT NOT NULL,
-                ended_at TEXT,
-                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-            );
+                CREATE TABLE IF NOT EXISTS time_entries (
+                    id TEXT PRIMARY KEY,
+                    task_id TEXT NOT NULL,
+                    started_at TEXT NOT NULL,
+                    ended_at TEXT,
+                    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+                );
 
-            CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
-            CREATE INDEX IF NOT EXISTS idx_entries_task ON time_entries(task_id);
-            CREATE INDEX IF NOT EXISTS idx_entries_running ON time_entries(ended_at) WHERE ended_at IS NULL;
-        ",
-        kind: MigrationKind::Up,
-    }]
+                CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id);
+                CREATE INDEX IF NOT EXISTS idx_entries_task ON time_entries(task_id);
+                CREATE INDEX IF NOT EXISTS idx_entries_running ON time_entries(ended_at) WHERE ended_at IS NULL;
+            ",
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "add areas and project.area_id",
+            sql: "
+                CREATE TABLE IF NOT EXISTS areas (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    colour TEXT NOT NULL DEFAULT '#7c5cff',
+                    created_at TEXT NOT NULL
+                );
+
+                ALTER TABLE projects ADD COLUMN area_id TEXT
+                    REFERENCES areas(id) ON DELETE SET NULL;
+
+                CREATE INDEX IF NOT EXISTS idx_projects_area ON projects(area_id);
+            ",
+            kind: MigrationKind::Up,
+        },
+    ]
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

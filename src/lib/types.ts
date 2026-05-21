@@ -1,7 +1,15 @@
+export type Area = {
+  id: string;
+  name: string;
+  colour: string;
+  created_at: string;
+};
+
 export type Project = {
   id: string;
   name: string;
   colour: string;
+  area_id: string | null;
   created_at: string;
 };
 
@@ -22,6 +30,24 @@ export type TimeEntry = {
 export type ProjectWithTotal = Project & {
   total_seconds: number;
   task_count: number;
+  area_name: string | null;
+  area_colour: string | null;
+};
+
+export type AreaWithTotal = Area & {
+  total_seconds: number;
+  project_count: number;
+};
+
+export type StatsEntry = {
+  started_at: string;
+  ended_at: string | null;
+  project_id: string;
+  project_name: string;
+  project_colour: string;
+  area_id: string | null;
+  area_name: string | null;
+  area_colour: string | null;
 };
 
 export type TaskWithTotal = Task & {

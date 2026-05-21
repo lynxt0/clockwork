@@ -5,20 +5,33 @@ import { LiveDuration } from "../components/LiveDuration";
 import {
   createProject,
   deleteProject,
+  listAreasPlain,
   listProjects,
 } from "../lib/queries";
-import { PROJECT_COLOURS, type ProjectWithTotal } from "../lib/types";
+import {
+  PROJECT_COLOURS,
+  type Area,
+  type ProjectWithTotal,
+} from "../lib/types";
 import { useApp } from "../store";
 
 export function Home() {
   const [projects, setProjects] = useState<ProjectWithTotal[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
   const [showNew, setShowNew] = useState(false);
   const [name, setName] = useState("");
   const [colour, setColour] = useState<string>(PROJECT_COLOURS[0]);
+  const [areaId, setAreaId] = useState<string | null>(null);
   const running = useApp((s) => s.running);
   const goProject = useApp((s) => s.goProject);
+  const goAreas = useApp((s) => s.goAreas);
+  const goStats = useApp((s) => s.goStats);
 
-  const refresh = async () => setProjects(await listProjects());
+  const refresh = async () => {
+    const [ps, as] = await Promise.all([listProjects(), listAreasPlain()]);
+    setProjects(ps);
+    setAreas(as);
+  };
 
   useEffect(() => {
     refresh();
@@ -27,9 +40,10 @@ export function Home() {
   const handleCreate = async () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    await createProject(trimmed, colour);
+    await createProject(trimmed, colour, areaId);
     setName("");
     setColour(PROJECT_COLOURS[0]);
+    setAreaId(null);
     setShowNew(false);
     refresh();
   };
@@ -55,13 +69,39 @@ export function Home() {
               : `${projects.length} project${projects.length === 1 ? "" : "s"}`}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowNew((v) => !v)}
-          className="flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-medium text-white hover:bg-accent-hover"
-        >
-          <span className="text-base leading-none">+</span> New
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={goStats}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:bg-bg-hover hover:text-text"
+            aria-label="Stats"
+            title="Stats"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="6" y1="20" x2="6" y2="12" />
+              <line x1="12" y1="20" x2="12" y2="4" />
+              <line x1="18" y1="20" x2="18" y2="8" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={goAreas}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-text-muted hover:bg-bg-hover hover:text-text"
+            aria-label="Areas"
+            title="Areas"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowNew((v) => !v)}
+            className="flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-xs font-medium text-white hover:bg-accent-hover"
+          >
+            <span className="text-base leading-none">+</span> New
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -94,22 +134,58 @@ export function Home() {
                     aria-label={`Pick colour ${c}`}
                   />
                 ))}
-                <div className="ml-auto flex gap-2">
+              </div>
+              {areas.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] uppercase tracking-wider text-text-dim">
+                    Area
+                  </span>
                   <button
                     type="button"
-                    onClick={() => setShowNew(false)}
-                    className="rounded-md px-3 py-1.5 text-xs text-text-muted hover:bg-bg-hover"
+                    onClick={() => setAreaId(null)}
+                    className={`rounded-full border px-2 py-0.5 text-[11px] ${
+                      areaId === null
+                        ? "border-accent text-text"
+                        : "border-border/60 text-text-dim hover:text-text"
+                    }`}
                   >
-                    Cancel
+                    None
                   </button>
-                  <button
-                    type="button"
-                    onClick={handleCreate}
-                    className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
-                  >
-                    Create
-                  </button>
+                  {areas.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => setAreaId(a.id)}
+                      className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${
+                        areaId === a.id
+                          ? "border-accent text-text"
+                          : "border-border/60 text-text-muted hover:text-text"
+                      }`}
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: a.colour }}
+                      />
+                      {a.name}
+                    </button>
+                  ))}
                 </div>
+              )}
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNew(false)}
+                  className="rounded-md px-3 py-1.5 text-xs text-text-muted hover:bg-bg-hover"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreate}
+                  className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
+                >
+                  Create
+                </button>
               </div>
             </div>
           </motion.div>

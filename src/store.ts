@@ -8,7 +8,9 @@ import {
 type Screen =
   | { kind: "home" }
   | { kind: "project"; projectId: string }
-  | { kind: "task"; taskId: string; projectId: string };
+  | { kind: "task"; taskId: string; projectId: string }
+  | { kind: "areas" }
+  | { kind: "stats" };
 
 type RunningState = {
   entryId: string;
@@ -24,6 +26,8 @@ type AppState = {
   goHome: () => void;
   goProject: (projectId: string) => void;
   goTask: (taskId: string, projectId: string) => void;
+  goAreas: () => void;
+  goStats: () => void;
   hydrate: () => Promise<void>;
   startTask: (taskId: string) => Promise<void>;
   stopActive: () => Promise<void>;
@@ -37,6 +41,8 @@ export const useApp = create<AppState>((set, get) => ({
   goProject: (projectId) => set({ screen: { kind: "project", projectId } }),
   goTask: (taskId, projectId) =>
     set({ screen: { kind: "task", taskId, projectId } }),
+  goAreas: () => set({ screen: { kind: "areas" } }),
+  goStats: () => set({ screen: { kind: "stats" } }),
 
   hydrate: async () => {
     const running = await getRunningEntry();

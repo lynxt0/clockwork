@@ -1,7 +1,10 @@
 import { db, nowIso, uid } from "./db";
 import type {
+  Area,
+  AreaWithTotal,
   Project,
   ProjectWithTotal,
+  StatsEntry,
   Task,
   TaskWithTotal,
   TimeEntry,
@@ -12,6 +15,8 @@ export async function listProjects(): Promise<ProjectWithTotal[]> {
   return conn.select<ProjectWithTotal[]>(`
     SELECT
       p.*,
+      a.name AS area_name,
+      a.colour AS area_colour,
       COALESCE(SUM(
         CAST(
           (julianday(COALESCE(te.ended_at, datetime('now'))) - julianday(te.started_at)) * 86400
@@ -20,6 +25,7 @@ export async function listProjects(): Promise<ProjectWithTotal[]> {
       ), 0) AS total_seconds,
       COUNT(DISTINCT t.id) AS task_count
     FROM projects p
+    LEFT JOIN areas a ON a.id = p.area_id
     LEFT JOIN tasks t ON t.project_id = p.id
     LEFT JOIN time_entries te ON te.task_id = t.id
     GROUP BY p.id
@@ -39,17 +45,25 @@ export async function getProject(id: string): Promise<Project | null> {
 export async function createProject(
   name: string,
   colour: string,
+  areaId: string | null = null,
 ): Promise<Project> {
   const conn = await db();
   const project: Project = {
     id: uid(),
     name,
     colour,
+    area_id: areaId,
     created_at: nowIso(),
   };
   await conn.execute(
-    "INSERT INTO projects (id, name, colour, created_at) VALUES ($1, $2, $3, $4)",
-    [project.id, project.name, project.colour, project.created_at],
+    "INSERT INTO projects (id, name, colour, area_id, created_at) VALUES ($1, $2, $3, $4, $5)",
+    [
+      project.id,
+      project.name,
+      project.colour,
+      project.area_id,
+      project.created_at,
+    ],
   );
   return project;
 }
@@ -62,6 +76,79 @@ export async function deleteProject(id: string): Promise<void> {
 export async function renameProject(id: string, name: string): Promise<void> {
   const conn = await db();
   await conn.execute("UPDATE projects SET name = $1 WHERE id = $2", [name, id]);
+}
+
+export async function setProjectArea(
+  projectId: string,
+  areaId: string | null,
+): Promise<void> {
+  const conn = await db();
+  await conn.execute("UPDATE projects SET area_id = $1 WHERE id = $2", [
+    areaId,
+    projectId,
+  ]);
+}
+
+export async function listAreas(): Promise<AreaWithTotal[]> {
+  const conn = await db();
+  return conn.select<AreaWithTotal[]>(`
+    SELECT
+      a.*,
+      COUNT(DISTINCT p.id) AS project_count,
+      COALESCE(SUM(
+        CAST(
+          (julianday(COALESCE(te.ended_at, datetime('now'))) - julianday(te.started_at)) * 86400
+          AS INTEGER
+        )
+      ), 0) AS total_seconds
+    FROM areas a
+    LEFT JOIN projects p ON p.area_id = a.id
+    LEFT JOIN tasks t ON t.project_id = p.id
+    LEFT JOIN time_entries te ON te.task_id = t.id
+    GROUP BY a.id
+    ORDER BY a.created_at DESC
+  `);
+}
+
+export async function listAreasPlain(): Promise<Area[]> {
+  const conn = await db();
+  return conn.select<Area[]>("SELECT * FROM areas ORDER BY created_at DESC");
+}
+
+export async function createArea(
+  name: string,
+  colour: string,
+): Promise<Area> {
+  const conn = await db();
+  const area: Area = {
+    id: uid(),
+    name,
+    colour,
+    created_at: nowIso(),
+  };
+  await conn.execute(
+    "INSERT INTO areas (id, name, colour, created_at) VALUES ($1, $2, $3, $4)",
+    [area.id, area.name, area.colour, area.created_at],
+  );
+  return area;
+}
+
+export async function renameArea(id: string, name: string): Promise<void> {
+  const conn = await db();
+  await conn.execute("UPDATE areas SET name = $1 WHERE id = $2", [name, id]);
+}
+
+export async function recolourArea(id: string, colour: string): Promise<void> {
+  const conn = await db();
+  await conn.execute("UPDATE areas SET colour = $1 WHERE id = $2", [
+    colour,
+    id,
+  ]);
+}
+
+export async function deleteArea(id: string): Promise<void> {
+  const conn = await db();
+  await conn.execute("DELETE FROM areas WHERE id = $1", [id]);
 }
 
 export async function listTasks(projectId: string): Promise<TaskWithTotal[]> {
@@ -194,4 +281,23 @@ export async function listEntries(taskId: string): Promise<TimeEntry[]> {
 export async function deleteEntry(id: string): Promise<void> {
   const conn = await db();
   await conn.execute("DELETE FROM time_entries WHERE id = $1", [id]);
+}
+
+export async function listStatsEntries(): Promise<StatsEntry[]> {
+  const conn = await db();
+  return conn.select<StatsEntry[]>(`
+    SELECT
+      te.started_at,
+      te.ended_at,
+      p.id AS project_id,
+      p.name AS project_name,
+      p.colour AS project_colour,
+      a.id AS area_id,
+      a.name AS area_name,
+      a.colour AS area_colour
+    FROM time_entries te
+    JOIN tasks t ON t.id = te.task_id
+    JOIN projects p ON p.id = t.project_id
+    LEFT JOIN areas a ON a.id = p.area_id
+  `);
 }

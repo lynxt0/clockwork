@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { EditableText } from "../components/EditableText";
 import { LiveDuration } from "../components/LiveDuration";
 import { TitleBar } from "../components/TitleBar";
 import { Toggle } from "../components/Toggle";
@@ -7,9 +8,12 @@ import {
   createTask,
   deleteTask,
   getProject,
+  listAreasPlain,
   listTasks,
+  renameProject,
+  setProjectArea,
 } from "../lib/queries";
-import type { Project, TaskWithTotal } from "../lib/types";
+import type { Area, Project, TaskWithTotal } from "../lib/types";
 import { useApp } from "../store";
 
 type Props = { projectId: string };
@@ -17,6 +21,8 @@ type Props = { projectId: string };
 export function ProjectDetail({ projectId }: Props) {
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<TaskWithTotal[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [showAreaPicker, setShowAreaPicker] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [name, setName] = useState("");
   const running = useApp((s) => s.running);
@@ -26,12 +32,14 @@ export function ProjectDetail({ projectId }: Props) {
   const goTask = useApp((s) => s.goTask);
 
   const refresh = async () => {
-    const [p, ts] = await Promise.all([
+    const [p, ts, a] = await Promise.all([
       getProject(projectId),
       listTasks(projectId),
+      listAreasPlain(),
     ]);
     setProject(p);
     setTasks(ts);
+    setAreas(a);
   };
 
   useEffect(() => {
@@ -70,28 +78,110 @@ export function ProjectDetail({ projectId }: Props) {
     <div className="flex h-full flex-col">
       <TitleBar onBack={goHome} />
 
-      <div className="flex items-center gap-3 border-b border-border/40 px-4 py-3">
-        <span
-          className="h-3 w-3 shrink-0 rounded-full"
-          style={{ backgroundColor: project?.colour ?? "#7c5cff" }}
-        />
-        <div className="flex-1 overflow-hidden">
-          <div className="truncate text-base font-semibold text-text">
-            {project?.name ?? "Loading…"}
-          </div>
-          <LiveDuration
-            baseSeconds={totalSeconds}
-            runningSince={runningInProject?.startedAt ?? null}
-            className="font-mono text-xs tabular-nums text-text-muted"
+      <div className="border-b border-border/40 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <span
+            className="h-3 w-3 shrink-0 rounded-full"
+            style={{ backgroundColor: project?.colour ?? "#7c5cff" }}
           />
+          <div className="min-w-0 flex-1">
+            {project ? (
+              <EditableText
+                value={project.name}
+                onSave={async (next) => {
+                  await renameProject(project.id, next);
+                  refresh();
+                }}
+                className="truncate text-base font-semibold text-text"
+                inputClassName="w-full rounded-md border border-accent/40 bg-bg-elevated px-2 py-0.5 text-base font-semibold text-text outline-none focus:border-accent"
+                ariaLabel="Edit project name"
+              />
+            ) : (
+              <div className="text-base font-semibold text-text-muted">
+                Loading…
+              </div>
+            )}
+            <LiveDuration
+              baseSeconds={totalSeconds}
+              runningSince={runningInProject?.startedAt ?? null}
+              className="font-mono text-xs tabular-nums text-text-muted"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowNew((v) => !v)}
+            className="flex h-8 items-center gap-1.5 rounded-md bg-bg-elevated px-3 text-xs font-medium text-text hover:bg-bg-hover"
+          >
+            <span className="text-base leading-none">+</span> Task
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowNew((v) => !v)}
-          className="flex h-8 items-center gap-1.5 rounded-md bg-bg-elevated px-3 text-xs font-medium text-text hover:bg-bg-hover"
-        >
-          <span className="text-base leading-none">+</span> Task
-        </button>
+
+        {project && (
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowAreaPicker((v) => !v)}
+              className="flex items-center gap-1.5 rounded-full border border-border/60 bg-bg-elevated px-2 py-0.5 text-[11px] text-text-muted hover:bg-bg-hover hover:text-text"
+            >
+              {project.area_id ? (
+                <>
+                  <span
+                    className="h-2 w-2 rounded-full"
+                    style={{
+                      backgroundColor:
+                        areas.find((a) => a.id === project.area_id)?.colour ??
+                        "#7c5cff",
+                    }}
+                  />
+                  {areas.find((a) => a.id === project.area_id)?.name ??
+                    "Unknown area"}
+                </>
+              ) : (
+                <span className="text-text-dim">No area</span>
+              )}
+            </button>
+            <AnimatePresence>
+              {showAreaPicker && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  className="flex flex-wrap gap-1"
+                >
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await setProjectArea(project.id, null);
+                      setShowAreaPicker(false);
+                      refresh();
+                    }}
+                    className="rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-text-dim hover:bg-bg-hover hover:text-text"
+                  >
+                    None
+                  </button>
+                  {areas.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={async () => {
+                        await setProjectArea(project.id, a.id);
+                        setShowAreaPicker(false);
+                        refresh();
+                      }}
+                      className="flex items-center gap-1 rounded-full border border-border/60 px-2 py-0.5 text-[11px] text-text-muted hover:bg-bg-hover hover:text-text"
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: a.colour }}
+                      />
+                      {a.name}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
 
       <AnimatePresence>

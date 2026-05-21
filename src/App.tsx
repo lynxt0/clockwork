@@ -1,9 +1,10 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect } from "react";
 import { ResizeHandles } from "./components/ResizeHandles";
-import { ThemeToggle } from "./components/ThemeToggle";
+import { Areas } from "./screens/Areas";
 import { Home } from "./screens/Home";
 import { ProjectDetail } from "./screens/ProjectDetail";
+import { Stats } from "./screens/Stats";
 import { TaskDetail } from "./screens/TaskDetail";
 import { useApp } from "./store";
 
@@ -33,7 +34,9 @@ function App() {
               ? "home"
               : screen.kind === "project"
                 ? `project-${screen.projectId}`
-                : `task-${screen.taskId}`
+                : screen.kind === "task"
+                  ? `task-${screen.taskId}`
+                  : screen.kind
           }
           initial={{ opacity: 0, x: 8 }}
           animate={{ opacity: 1, x: 0 }}
@@ -48,10 +51,11 @@ function App() {
           {screen.kind === "task" && (
             <TaskDetail taskId={screen.taskId} projectId={screen.projectId} />
           )}
+          {screen.kind === "areas" && <Areas />}
+          {screen.kind === "stats" && <Stats />}
         </motion.div>
       </AnimatePresence>
       <ResizeHandles />
-      <ThemeToggle />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { ThemeToggle } from "./ThemeToggle";
 
 type Props = {
   title?: string;
@@ -60,6 +61,7 @@ export function TitleBar({ title, onBack }: Props) {
       )}
 
       <div className="flex items-center gap-0.5">
+        <ThemeToggle />
         <button
           type="button"
           onClick={() => win.minimize()}
